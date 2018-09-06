@@ -8,6 +8,7 @@ package shoppingcarttablegui;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
@@ -20,6 +21,7 @@ import javax.swing.DefaultListModel;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComponent;
+import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
@@ -39,6 +41,7 @@ import javax.swing.event.DocumentListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableModel;
+import org.omg.IOP.TransactionService;
 /**
  *
  * @author vangu
@@ -56,6 +59,10 @@ public class shoppingCartTableGui extends JPanel{
     private JLabel ItemSerialNumberLabel;
     private DefaultTableModel newTable;
     private JTable table;
+    private DefaultListModel shoppingCartListModel;
+    private JList shoppingCartList;
+    private JDialog checkOutDialog;
+    private String[] columnNames = {"Name","Price","Serial Number"};
     
     public shoppingCartTableGui(){
         super(new BorderLayout());
@@ -71,9 +78,6 @@ public class shoppingCartTableGui extends JPanel{
          List.setSelectionMode(MULTIPLE_INTERVAL_SELECTION);
          List.setSelectedIndex(0);
          List.setVisibleRowCount(5);
-
-         
-         String[] columnNames = {"Name","Price","Serial Number"};
          
          newTable = new DefaultTableModel(columnNames,0);
          
@@ -166,10 +170,42 @@ public class shoppingCartTableGui extends JPanel{
          
          Panel1.add(PrintButton);
          Panel1.add(ClearButton);
+         
+         JButton addToCart = new JButton();
+         addToCartListener add1 = new addToCartListener(addToCart);
+         addToCart.addActionListener(add1);
+         addToCart.setEnabled(true);
+         
+         JButton removeFromCart = new JButton();
+         removeItemFromCart remove1 = new removeItemFromCart(removeFromCart);
+         removeFromCart.addActionListener(remove1);
+         removeFromCart.setEnabled(true);
+         
+         JButton checkOut = new JButton();
+         checkOutListener checkOut1 = new checkOutListener(checkOut);
+         checkOut.addActionListener(checkOut1);
+         checkOut.setEnabled(true);
          /* adds the Panel to the frame */  
-         JTextArea newTextArea = new JTextArea();
+         
+         shoppingCartListModel = new DefaultListModel();
+         shoppingCartList = new JList(shoppingCartListModel);
+         shoppingCartList.setBounds(145,0,400,400);
+         
          JPanel Panel3 = new JPanel();
-         Panel3.add(newTextArea);
+         Panel3.setLayout(null);
+         addToCart.setBounds(10,10,115,25);
+         addToCart.setText("Add item");
+         
+         removeFromCart.setBounds(10, 45,115,25);
+         removeFromCart.setText("Remove item");
+         
+         checkOut.setBounds(10,80,115,25);
+         checkOut.setText("Check out");
+         
+         Panel3.add(addToCart);
+         Panel3.add(removeFromCart);
+         Panel3.add(checkOut);
+         Panel3.add(shoppingCartList);
          JTabbedPane tabbedPane = new JTabbedPane();
          tabbedPane.add("Shopping Cart",Panel3);
          tabbedPane.add("Catalog", Panel1);
@@ -182,9 +218,10 @@ public class shoppingCartTableGui extends JPanel{
     
     private static void createAndShowGUI() {
         //Create and set up the window.
-        frame = new JFrame("Tommy's Grocery List");
-        frame.setLocation(600,400);
+        frame = new JFrame("Shopping Cart");
+        frame.setLocation(600,300);
         frame.setPreferredSize(new Dimension(800,700));
+        frame.setResizable(false);
         //frame.setLayout(new GridLayout(2,2,5,5));
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
@@ -208,6 +245,130 @@ public class shoppingCartTableGui extends JPanel{
         });
     }
 
+    class addToCartListener implements ActionListener{
+        public JButton button;
+        
+        private addToCartListener(JButton addToCart) {
+            this.button = addToCart;
+        }
+        public void actionPerformed(ActionEvent e) {
+            if(table.getSelectedRow() >= 0 && table.getSelectedRow() < table.getRowCount()){
+                Merchandise newCartItem = new Merchandise();
+                for(int iterator = 0; iterator < 3; iterator++ ){
+                    if(iterator ==0){
+                        newCartItem.setItemName((String)table.getValueAt(table.getSelectedRow(),iterator));
+                    }
+                    if(iterator ==1){
+                        newCartItem.setPrice(Double.parseDouble((String)table.getValueAt(table.getSelectedRow(),iterator)));
+                    }
+                    if(iterator ==2){
+                        newCartItem.setSerialNumber((String)table.getValueAt(table.getSelectedRow(),iterator));
+                    }
+                }
+                shoppingCartListModel.addElement(newCartItem);
+            }
+        }
+        
+    }
+    
+    class checkOutListener implements ActionListener{
+        public JButton button;
+        
+        private checkOutListener(JButton checkOutListener) {
+            this.button = checkOutListener;
+        }
+        public void actionPerformed(ActionEvent e) {
+            JFrame dialogFrame = new JFrame();
+            checkOutDialog = new JDialog(dialogFrame,"checkout", true);
+            checkOutDialog.setSize(500,300);
+            checkOutDialog.setLocation(500,300);
+            checkOutDialog.setResizable(false);
+            checkOutDialog.setLayout(null);
+
+            JButton finishTransaction = new JButton();
+            finishTransaction.setLocation(100, 220);
+            finishTransaction.setSize(100,25);
+            finishTransaction.setText("Save");
+            
+            JButton cancelTransaction = new JButton();
+            cancelTransaction.setLocation(300, 220);
+            cancelTransaction.setSize(100,25);
+            cancelTransaction.setText("Cancel");
+            
+            
+
+            
+            int size = shoppingCartListModel.size()-1;
+            int size2 = size;
+
+            ArrayList<Merchandise> itemListing = new ArrayList();
+            
+            Object[][] transactionItems = new  Object[size+1][];
+            
+            while(size >= 0){
+                itemListing.add((Merchandise)shoppingCartListModel.getElementAt(size));
+                size--;
+            }
+            
+            int itemTotal = 0;
+            for(int iterator =  0; iterator < size2; iterator++){
+                Object[] items = {itemListing.get(iterator).getItemName(),itemListing.get(iterator).getPrice(),itemListing.get(iterator).getSerialNumber()};
+                itemTotal += itemListing.get(iterator).getPrice();
+                transactionItems[iterator] = items;
+            }
+            Object[] subTotal = {"Total",itemTotal,null};
+            transactionItems[size2] = subTotal;
+            DefaultTableModel transctions = new DefaultTableModel(transactionItems, columnNames);
+            JTable transactionTable = new JTable(transctions); 
+            //transactionTable.setFillsViewportHeight(true);
+            transactionTable.setLocation(0,0);
+            transactionTable.setSize(500, 210);
+            
+            checkOutDialog.add(finishTransaction);
+            checkOutDialog.add(transactionTable);
+            checkOutDialog.add(cancelTransaction);
+            checkOutDialog.setVisible(true);
+        }
+        
+    }
+    
+    class removeItemFromCart implements ActionListener{
+        public JButton button;
+        
+        private removeItemFromCart(JButton removeItemFromCart) {
+            this.button = removeItemFromCart;
+        }
+        public void actionPerformed(ActionEvent e) {
+            int index = shoppingCartList.getSelectedIndex();
+            int size = shoppingCartListModel.size();
+            if(size != 0 && (index >= 0 && index < size)){
+                int[] selectedIndices = shoppingCartList.getSelectedIndices();
+                
+                for(int i = 0; i < selectedIndices.length / 2; i++){
+                    int temp = selectedIndices[i];
+                    selectedIndices[i] = selectedIndices[selectedIndices.length - i - 1];
+                    selectedIndices[selectedIndices.length - i - 1] = temp;
+                }
+                
+                for(int section: selectedIndices){
+                    // might not work depending on if we remove items in the middle or beginning of the list
+                    shoppingCartListModel.removeElementAt(section);
+                }
+            }
+
+            //Select an index.
+            index--;
+            if(index < 0){
+                index++;
+            }
+            if(shoppingCartListModel.size() != 0){
+            shoppingCartList.setSelectedIndex(index);
+            }
+            
+        }
+        
+    }
+    
     class clearListener implements ActionListener{
         public JButton button;
          
