@@ -78,6 +78,7 @@ public class shoppingCartTableGui extends JPanel{
          List.setSelectionMode(MULTIPLE_INTERVAL_SELECTION);
          List.setSelectedIndex(0);
          List.setVisibleRowCount(5);
+         List.setSize(100, 100);
          
          newTable = new DefaultTableModel(columnNames,0);
          
@@ -229,10 +230,11 @@ public class shoppingCartTableGui extends JPanel{
         JComponent newContentPane = new shoppingCartTableGui();
         newContentPane.setOpaque(true); //content panes must be opaque
         frame.setContentPane(newContentPane);
-
         //Display the window.
         frame.pack();
-        frame.setVisible(true);
+        
+        // inserting the login dialogPane here
+        loginPane newLoginPane = new loginPane(frame);
     }
 
     public static void main(String[] args) {
@@ -245,6 +247,8 @@ public class shoppingCartTableGui extends JPanel{
         });
     }
 
+    /* will most likely move these Listener classes to another java file or either create inner classes specific to each button */
+    
     class addToCartListener implements ActionListener{
         public JButton button;
         
@@ -278,6 +282,9 @@ public class shoppingCartTableGui extends JPanel{
             this.button = checkOutListener;
         }
         public void actionPerformed(ActionEvent e) {
+            if(shoppingCartListModel.size() == 0){
+                return;
+            }
             JFrame dialogFrame = new JFrame();
             checkOutDialog = new JDialog(dialogFrame,"checkout", true);
             checkOutDialog.setSize(500,300);
