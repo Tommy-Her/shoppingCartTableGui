@@ -13,7 +13,14 @@ import java.awt.GridLayout;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -27,6 +34,7 @@ import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
@@ -61,8 +69,17 @@ public class shoppingCartTableGui extends JPanel{
     private JTable table;
     private DefaultListModel shoppingCartListModel;
     private JList shoppingCartList;
+    private DefaultListModel invoiceCartListModel;
+    private JList invoiceCart; 
     private JDialog checkOutDialog;
     private String[] columnNames = {"Name","Price","Serial Number"};
+    
+    private static final String DBNAME = "shoppingcart";
+    private static final String USERNAME = "root";
+    private static final String PASSWORD = "root";
+    private static final String CONN_STRING = "jdbc:mysql://localhost/" + DBNAME + "?user=" + USERNAME + "&password=" + PASSWORD + "&useSSL=false";
+    
+    private int invoiceSequence = 0;
     
     public shoppingCartTableGui(){
         super(new BorderLayout());
@@ -207,9 +224,29 @@ public class shoppingCartTableGui extends JPanel{
          Panel3.add(removeFromCart);
          Panel3.add(checkOut);
          Panel3.add(shoppingCartList);
+         
+         JPanel Panel4 = new JPanel();
+         Panel4.setLayout(null);
+         
+         invoiceCartListModel = new DefaultListModel();
+         invoiceCart = new JList(invoiceCartListModel);
+         invoiceCart.setBounds(145,0,400,400);
+         
+         JButton editInvoice = new JButton();
+         editListener editInvoiceListener = new editListener(editInvoice);
+         editInvoice.setEnabled(true);
+         editInvoice.setActionCommand("Edit Invoice");
+         editInvoice.addActionListener(editInvoiceListener);
+         editInvoice.setBounds(10,10,115,25);
+         editInvoice.setText("Edit");
+         
+         Panel4.add(invoiceCart);
+         Panel4.add(editInvoice);
+
          JTabbedPane tabbedPane = new JTabbedPane();
          tabbedPane.add("Shopping Cart",Panel3);
          tabbedPane.add("Catalog", Panel1);
+         tabbedPane.add("Invoices", Panel4);
          add(tabbedPane);
          
          // essentially what I have done is added all of the catalog section onto a tabbed pane that I created. It looks neater and easier to use
@@ -237,9 +274,49 @@ public class shoppingCartTableGui extends JPanel{
         loginPane newLoginPane = new loginPane(frame);
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws SQLException {
         //Schedule a job for the event-dispatching thread:
         //creating and showing this application's GUI.
+            Connection conn = null;
+            Statement stmt1 = null;
+            ResultSet rs1 = null;
+            
+            try {                
+                conn = DriverManager.getConnection(CONN_STRING);
+                System.out.println("Connected!");
+                
+                /* 
+                ResultSet.TYPE_SCROLL_INSENSITIVE : allows for the connection to scroll up and down the database 
+                and is not sensitive to changes in the database. (READ ONLY) 
+                
+                ResultSet.CONCUR_READ_ONLY : (READ ONLY)
+                */
+                
+                // THIS IS AN EXAMPLE OF HOW TO CREATE A QUERY
+                
+                
+                stmt1 = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+                rs1 = stmt1.executeQuery("select * from client_order order by order_id desc limit 1");
+                rs1.last();
+                System.out.println("Last row = " + rs1.getInt("order_id"));
+                
+                
+            } catch (SQLException ex) {
+
+                //shows the error message, code, and SQL state
+                Db.processMessage(ex);
+                
+            } finally {
+                if(conn != null){
+                    conn.close();
+                }
+                if(rs1 != null){
+                    rs1.close();
+                }
+                if(stmt1 != null){
+                    stmt1.close();
+                }
+            }
         javax.swing.SwingUtilities.invokeLater(new Runnable() {
             public void run() {
                 createAndShowGUI();
@@ -248,6 +325,18 @@ public class shoppingCartTableGui extends JPanel{
     }
 
     /* will most likely move these Listener classes to another java file or either create inner classes specific to each button */
+
+    class editListener implements ActionListener{
+        public JButton button;
+        
+        private editListener(JButton addToCart) {
+            this.button = addToCart;
+        }
+        public void actionPerformed(ActionEvent e) {
+
+        }
+        
+    }    
     
     class addToCartListener implements ActionListener{
         public JButton button;
@@ -276,7 +365,9 @@ public class shoppingCartTableGui extends JPanel{
     }
     
     class checkOutListener implements ActionListener{
-        public JButton button;
+        private JButton button;
+        private int nextOrderID = 0;
+        private String[] QueryList;
         
         private checkOutListener(JButton checkOutListener) {
             this.button = checkOutListener;
@@ -297,32 +388,108 @@ public class shoppingCartTableGui extends JPanel{
             finishTransaction.setSize(100,25);
             finishTransaction.setText("Save");
             
+            finishTransaction.addActionListener(new ActionListener(){
+                public void actionPerformed(ActionEvent e){
+                    try(
+                        Connection conn = DriverManager.getConnection(CONN_STRING);
+                        Statement stmt2 = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+                            
+                        Statement stmt3 = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+                        ) {
+
+                        String QueryStatement2 = "insert into client_order(order_id,purchase_date) select " + nextOrderID + " ,current_date();";
+                        System.out.println(QueryStatement2);
+                        int rs2 = stmt2.executeUpdate(QueryStatement2);
+                        
+                        
+                        String BaseQuery = "insert into order_item (order_id, itemName, itemPrice, itemSerial) values";
+                        for(int iterator = 0; iterator < QueryList.length; iterator++){
+                           BaseQuery += QueryList[iterator];
+                           if(iterator+1 != QueryList.length){
+                               BaseQuery += ",";
+                           }
+                           if(iterator+1 == QueryList.length){
+                               BaseQuery += ";";
+                           }
+                        }
+                        System.out.println(BaseQuery);
+                        int rs3 = stmt3.executeUpdate(BaseQuery);
+                        
+
+                    } catch (SQLException ex) {
+
+                        Logger.getLogger(shoppingCartTableGui.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                    
+                    
+                    invoiceCartListModel.addElement(nextOrderID);
+                    checkOutDialog.setVisible(false);
+                    shoppingCartListModel.removeAllElements();
+                }
+            });
+            
             JButton cancelTransaction = new JButton();
             cancelTransaction.setLocation(300, 220);
             cancelTransaction.setSize(100,25);
             cancelTransaction.setText("Cancel");
             
-            
+            cancelTransaction.addActionListener(new ActionListener(){
+                public void actionPerformed(ActionEvent e){
+                    checkOutDialog.setVisible(false);
+                }
+            });
 
             
             int size = shoppingCartListModel.size()-1;
             int size2 = size;
 
             ArrayList<Merchandise> itemListing = new ArrayList();
-            
+            QueryList = new String[size];
             Object[][] transactionItems = new  Object[size+1][];
-            
+            // I think I will need to keep a copy of these items in another table so that these can be edited
+            // from through the invoice tab. You'll have to have an make sure the changes are saved. (gets messy)
             while(size >= 0){
                 itemListing.add((Merchandise)shoppingCartListModel.getElementAt(size));
                 size--;
             }
             
+            
+            try(
+                Connection conn = DriverManager.getConnection(CONN_STRING);
+                Statement stmt1 = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+                ResultSet rs1 = stmt1.executeQuery("select * from client_order order by order_id desc limit 1");) {
+
+                rs1.last();
+                nextOrderID = rs1.getInt("order_id") + 1;
+                
+            } catch (SQLException ex) {
+                
+                Logger.getLogger(shoppingCartTableGui.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            // merge these two try-catch blocks
+
+            
             int itemTotal = 0;
             for(int iterator =  0; iterator < size2; iterator++){
-                Object[] items = {itemListing.get(iterator).getItemName(),itemListing.get(iterator).getPrice(),itemListing.get(iterator).getSerialNumber()};
+                String itemName = itemListing.get(iterator).getItemName();
+                Double itemPrice = itemListing.get(iterator).getPrice();
+                String itemSerialNumber = itemListing.get(iterator).getSerialNumber();
+                System.out.println(itemSerialNumber);
+                if(itemSerialNumber.equals("")){
+                    itemSerialNumber = "null";
+                }
+                else{
+                    itemSerialNumber = "'" + itemSerialNumber + "'";
+                }
+                System.out.println(itemSerialNumber);
+
+                String QueryString = "("+ nextOrderID + ", '" + itemName + "', " + itemPrice + ", " + itemSerialNumber + ")";
+                QueryList[iterator] = QueryString;
+                Object[] items = {itemName,itemPrice,itemSerialNumber};
                 itemTotal += itemListing.get(iterator).getPrice();
                 transactionItems[iterator] = items;
             }
+            
             Object[] subTotal = {"Total",itemTotal,null};
             transactionItems[size2] = subTotal;
             DefaultTableModel transctions = new DefaultTableModel(transactionItems, columnNames);
