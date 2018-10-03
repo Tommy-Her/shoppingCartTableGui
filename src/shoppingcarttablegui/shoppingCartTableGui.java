@@ -81,6 +81,14 @@ public class shoppingCartTableGui extends JPanel{
     
     private int invoiceSequence = 0;
     
+    
+    /*
+    
+    We need to find out how to connect to the database remotely and not from the local machine hosting the database. But I guess we can
+    first implement the invoice tabbed pane first.
+    
+    */
+    
     public shoppingCartTableGui(){
         super(new BorderLayout());
          /* First you need to create the Model that the list is going to be */
@@ -439,8 +447,8 @@ public class shoppingCartTableGui extends JPanel{
                 }
             });
 
-            
-            int size = shoppingCartListModel.size()-1;
+            // fix the size of list to include all items in the list
+            int size = shoppingCartListModel.size();
             int size2 = size;
 
             ArrayList<Merchandise> itemListing = new ArrayList();
@@ -448,9 +456,11 @@ public class shoppingCartTableGui extends JPanel{
             Object[][] transactionItems = new  Object[size+1][];
             // I think I will need to keep a copy of these items in another table so that these can be edited
             // from through the invoice tab. You'll have to have an make sure the changes are saved. (gets messy)
+            size--;
             while(size >= 0){
                 itemListing.add((Merchandise)shoppingCartListModel.getElementAt(size));
                 size--;
+                System.out.println(itemListing.size());
             }
             
             
@@ -467,7 +477,7 @@ public class shoppingCartTableGui extends JPanel{
                 Logger.getLogger(shoppingCartTableGui.class.getName()).log(Level.SEVERE, null, ex);
             }
             // merge these two try-catch blocks
-
+            System.out.println("this is the size of the list: " + size2);
             
             int itemTotal = 0;
             for(int iterator =  0; iterator < size2; iterator++){
@@ -495,7 +505,7 @@ public class shoppingCartTableGui extends JPanel{
             DefaultTableModel transctions = new DefaultTableModel(transactionItems, columnNames);
             JTable transactionTable = new JTable(transctions); 
             //transactionTable.setFillsViewportHeight(true);
-            transactionTable.setLocation(0,0);
+            transactionTable.setLocation(0,10);
             transactionTable.setSize(500, 210);
             
             checkOutDialog.add(finishTransaction);
