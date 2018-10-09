@@ -74,6 +74,8 @@ public class shoppingCartTableGui extends JPanel{
     private JDialog checkOutDialog;
     private String[] columnNames = {"Name","Price","Serial Number"};
     
+    private static int userSequence = 0;
+
     private static final String DBNAME = "shoppingcart";
     private static final String USERNAME = "root";
     private static final String PASSWORD = "root";
@@ -287,8 +289,9 @@ public class shoppingCartTableGui extends JPanel{
         //creating and showing this application's GUI.
             Connection conn = null;
             Statement stmt1 = null;
+            Statement stmt2 = null;
             ResultSet rs1 = null;
-            
+            ResultSet rs2 = null;
             try {                
                 conn = DriverManager.getConnection(CONN_STRING);
                 System.out.println("Connected!");
@@ -307,6 +310,20 @@ public class shoppingCartTableGui extends JPanel{
                 rs1 = stmt1.executeQuery("select * from client_order order by order_id desc limit 1");
                 rs1.last();
                 System.out.println("Last row = " + rs1.getInt("order_id"));
+                
+                
+                
+                stmt2 = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+                rs2 = stmt2.executeQuery("select * from users order by client_id desc limit 1");
+                if(rs2.next() == false){
+                    System.out.println("Last row of users = 0");
+                    userSequence = 0;
+                }
+                else{
+                    rs2.last();
+                    System.out.println("Last row of users = " + rs2.getInt("client_id"));
+                    userSequence = rs2.getInt("client_id");
+                }
                 
                 
             } catch (SQLException ex) {
