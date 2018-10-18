@@ -73,6 +73,7 @@ public class shoppingCartTableGui extends JPanel{
     private JList invoiceCart; 
     private JDialog checkOutDialog;
     private String[] columnNames = {"Name","Price","Serial Number"};
+    private static int clientID;
     
     private static int userSequence = 0;
 
@@ -282,6 +283,7 @@ public class shoppingCartTableGui extends JPanel{
         
         // inserting the login dialogPane here
         loginPane newLoginPane = new loginPane(frame);
+        clientID = newLoginPane.getClientID();
     }
 
     public static void main(String[] args) throws SQLException {
@@ -422,7 +424,7 @@ public class shoppingCartTableGui extends JPanel{
                         Statement stmt3 = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
                         ) {
 
-                        String QueryStatement2 = "insert into client_order(order_id,purchase_date) select " + nextOrderID + " ,current_date();";
+                        String QueryStatement2 = "insert into client_order(order_id,purchase_date,client_id) select " + nextOrderID + " ,current_date()," + clientID  +  ";";
                         System.out.println(QueryStatement2);
                         int rs2 = stmt2.executeUpdate(QueryStatement2);
                         

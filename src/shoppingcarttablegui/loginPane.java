@@ -39,6 +39,7 @@ public class loginPane extends JDialog{
     private JRadioButton addUserButton;
     private boolean newUser;
     private boolean correctLogin;
+    private int clientID;
     
     private static int userSequence = 0;
 
@@ -116,6 +117,9 @@ public class loginPane extends JDialog{
                 loginPane newLoginPane = new loginPane();
             }
         });
+    }
+    public int getClientID(){
+        return clientID;
     }
     
     public boolean isCorrectLogin() {
@@ -832,6 +836,7 @@ public class loginPane extends JDialog{
                 }
                 
                 if(result1.getInt("client_id") > 0){
+                    clientID = result1.getInt("client_id");
                     correctLogin = true;
                     parent.setVisible(true);
                     this.dispose();
