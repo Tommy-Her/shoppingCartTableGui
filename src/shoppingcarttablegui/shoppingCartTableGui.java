@@ -44,6 +44,8 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import static javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION;
 import javax.swing.SwingConstants;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.event.ListSelectionEvent;
@@ -258,11 +260,46 @@ public class shoppingCartTableGui extends JPanel{
          tabbedPane.add("Shopping Cart",Panel3);
          tabbedPane.add("Catalog", Panel1);
          tabbedPane.add("Invoices", Panel4);
+         tabbedPane.addChangeListener(new InvoiceListener());
          add(tabbedPane);
          
-         // essentially what I have done is added all of the catalog section onto a tabbed pane that I created. It looks neater and easier to use
-         // I will later try to create the shopping cart section of the tabbed pane to allow for adding of items as well as quantities
-         // the above code pretty much just creates the catalog pane and doesn't touch into the shopping cart aspect of it yet
+
+    }
+    
+    class InvoiceListener implements ChangeListener{
+        public void stateChanged(ChangeEvent e){
+            try {
+                populateInvoiceTab();
+            } catch (SQLException ex) {
+                Logger.getLogger(shoppingCartTableGui.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+    }
+    
+    public void populateInvoiceTab() throws SQLException{
+        invoiceCartListModel.clear();
+        try(
+            Connection conn = DriverManager.getConnection(CONN_STRING);
+            Statement statement1 = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+            )
+            {
+            String queryString = "select * from client_order where client_id = " + clientID + ';';
+            ResultSet resultset2 = statement1.executeQuery(queryString);
+            if(!resultset2.next()){
+                System.out.println("no value here");
+            }
+            else{
+                invoiceCartListModel.addElement(resultset2.getInt("order_id"));
+                // this is used to get the first element of the list since next() advances the resultset by one each time it is called.
+                while(resultset2.next()){
+                    invoiceCartListModel.addElement(resultset2.getInt("order_id"));
+                }
+            }
+  
+        } catch (SQLException ex) {
+
+            Logger.getLogger(shoppingCartTableGui.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
     
     private static void createAndShowGUI() {
@@ -353,14 +390,34 @@ public class shoppingCartTableGui extends JPanel{
 
     /* will most likely move these Listener classes to another java file or either create inner classes specific to each button */
 
-    class editListener implements ActionListener{
+    class editListener implements ActionListener{ // STILL NEED TO FINISH THE EDIT LISTENER. IT IS ESSENTIALLY THE SAME AS THE CHECKOUT LISTENER BUT IT PULLS THE INFORMATION FROM THE DATABASE
+                                                  // AS WELL AS DELETES THE PREVIOUS INVOICE AND CREATES A NEW INVOICE
         public JButton button;
         
         private editListener(JButton addToCart) {
             this.button = addToCart;
         }
         public void actionPerformed(ActionEvent e) {
+            JFrame dialogFrame = new JFrame();
+            checkOutDialog = new JDialog(dialogFrame,"edit invoice", true);
+            checkOutDialog.setSize(500,300);
+            checkOutDialog.setLocation(500,300);
+            checkOutDialog.setResizable(false);
+            checkOutDialog.setLayout(null);
 
+            JButton finishTransaction = new JButton();
+            finishTransaction.setLocation(100, 220);
+            finishTransaction.setSize(100,25);
+            finishTransaction.setText("Save");
+            
+            JButton cancelTransaction = new JButton();
+            cancelTransaction.setLocation(300, 220);
+            cancelTransaction.setSize(100,25);
+            cancelTransaction.setText("Cancel");
+            
+            checkOutDialog.add(finishTransaction);
+            checkOutDialog.add(cancelTransaction);
+            checkOutDialog.setVisible(true);
         }
         
     }    

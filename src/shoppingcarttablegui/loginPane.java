@@ -22,6 +22,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.Generated;
+import shoppingcarttablegui.shoppingCartTableGui;
 /**
  *
  * @author vangu
